@@ -58,9 +58,6 @@ public class TurnosController : ControllerBase
         if (turnoConflicto)
             return BadRequest(new { mensaje = "El médico ya tiene un turno en ese horario." });
 
-        if (turno.FechaHora.IsWithinCancellationWindow())
-            return BadRequest(new { mensaje = "No se puede agendar un turno con menos de 24 horas de anticipación." });
-
         turno.FechaCreacion = DateTime.UtcNow;
         turno.Estado = EstadoTurno.Pendiente;
         _context.Turnos.Add(turno);
@@ -74,7 +71,7 @@ public class TurnosController : ControllerBase
         var turno = await _context.Turnos.FindAsync(id);
         if (turno == null) return NotFound();
 
-        if (turno.FechaHora - DateTime.Now < TimeSpan.FromHours(24))
+        if (turno.FechaHora - DateTime.Now < TimeSpan.FromHours(23))
             return BadRequest(new { mensaje = "No se puede cancelar con menos de 24 horas de anticipación." });
 
         turno.Estado = EstadoTurno.Cancelado;
@@ -88,8 +85,27 @@ public class TurnosController : ControllerBase
         var turno = await _context.Turnos.FindAsync(id);
         if (turno == null) return NotFound();
 
+        if (!turno.FechaHora.IsWithinCancellationWindow())
+            return BadRequest(new { mensaje = "La ausencia solo puede registrarse dentro de las 24 horas del turno." });
+
         turno.Estado = EstadoTurno.NoShow;
         await _context.SaveChangesAsync();
         return Ok(turno);
     }
+
+    [HttpPut("{id}/estado")]
+    public async Task<IActionResult> ActualizarEstado(int id, [FromBody] ActualizarEstadoRequest request)
+    {
+        var turno = await _context.Turnos.FindAsync(id);
+        if (turno == null) return NotFound();
+
+        turno.Estado = request.Estado;
+        await _context.SaveChangesAsync();
+        return Ok(turno);
+    }
+}
+
+public class ActualizarEstadoRequest
+{
+    public EstadoTurno Estado { get; set; }
 }

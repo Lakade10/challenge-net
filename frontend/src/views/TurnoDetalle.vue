@@ -10,7 +10,18 @@
       <div class="detail-row"><span class="label">Fecha y hora</span><span>{{ formatFecha(turno.fechaHora) }}</span></div>
       <div class="detail-row"><span class="label">Estado</span><span>{{ turno.estado }}</span></div>
       <div class="detail-row"><span class="label">Motivo</span><span>{{ turno.motivo }}</span></div>
-      <div style="margin-top: 24px; display: flex; gap: 10px">
+
+      <div style="margin-top: 24px">
+        <div class="form-group">
+          <label>Cambiar estado</label>
+          <select v-model="nuevoEstado">
+            <option v-for="e in estados" :key="e" :value="e">{{ e }}</option>
+          </select>
+        </div>
+        <button @click="cambiarEstado" style="margin-bottom: 16px">Actualizar estado</button>
+      </div>
+
+      <div style="display: flex; gap: 10px">
         <button class="btn-danger" @click="cancelar">Cancelar turno</button>
         <button @click="marcarAusencia">Marcar ausencia</button>
       </div>
@@ -26,13 +37,16 @@ export default {
   name: 'TurnoDetalle',
   data() {
     return {
-      turno: null
+      turno: null,
+      nuevoEstado: 'Pendiente',
+      estados: ['Pendiente', 'Confirmado', 'Cancelado', 'Atendido', 'NoShow']
     }
   },
   async mounted() {
     try {
       const res = await turnosApi.getById(this.$route.params.id)
       this.turno = res.data
+      this.nuevoEstado = this.turno.estado
     } catch {
       alert('Error al procesar la solicitud')
     }
@@ -40,6 +54,14 @@ export default {
   methods: {
     formatFecha(fecha) {
       return new Date(fecha).toLocaleString('es-AR')
+    },
+    async cambiarEstado() {
+      try {
+        const res = await turnosApi.actualizarEstado(this.turno.id, { estado: this.nuevoEstado })
+        this.turno = res.data
+      } catch {
+        alert('Error al procesar la solicitud')
+      }
     },
     async cancelar() {
       await turnosApi.cancelar(this.turno.id)

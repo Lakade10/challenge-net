@@ -47,7 +47,7 @@ public class PacientesController : ControllerBase
         var existing = await _context.Pacientes.FindAsync(id);
         if (existing == null) return NotFound();
 
-        existing.NombreCompleto = paciente.Nombre;
+        existing.NombreCompleto = paciente.NombreCompleto;
         existing.DNI = paciente.DNI;
         existing.Email = paciente.Email;
         existing.Telefono = paciente.Telefono;

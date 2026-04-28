@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import TurnosList from '../views/TurnosList.vue'
 import TurnoNuevo from '../views/TurnoNuevo.vue'
 import TurnoDetalle from '../views/TurnoDetalle.vue'
@@ -13,7 +13,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 

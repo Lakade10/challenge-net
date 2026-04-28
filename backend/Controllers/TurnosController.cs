@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurnosMedicos.Data;
+using TurnosMedicos.Helpers;
 using TurnosMedicos.Models;
 
 namespace TurnosMedicos.Controllers;

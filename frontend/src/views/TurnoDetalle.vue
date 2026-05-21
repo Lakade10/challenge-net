@@ -18,12 +18,12 @@
             <option v-for="e in estados" :key="e" :value="e">{{ e }}</option>
           </select>
         </div>
-        <button @click="cambiarEstado" style="margin-bottom: 16px">Actualizar estado</button>
+        <button @click="cambiarEstado" :disabled="isLoading || this.turno.estado === this.nuevoEstado" style="margin-bottom: 16px">Actualizar estado</button>
       </div>
 
       <div style="display: flex; gap: 10px">
-        <button class="btn-danger" @click="cancelar">Cancelar turno</button>
-        <button @click="marcarAusencia">Marcar ausencia</button>
+        <button :disabled="isLoading || this.turno.estado === 'Cancelado'" class="btn-danger" @click="cancelar">Cancelar turno</button>
+        <button :disabled="isLoading || this.turno.estado === 'NoShow'" @click="marcarAusencia">Marcar ausencia</button>
       </div>
     </div>
     <p v-else>Cargando...</p>
@@ -39,7 +39,10 @@ export default {
     return {
       turno: null,
       nuevoEstado: 'Pendiente',
-      estados: ['Pendiente', 'Confirmado', 'Cancelado', 'Atendido', 'NoShow']
+      // Cambio: se eliminan Cancelado y NoShow de las opciones de estado, ya que esos estados solo se pueden asignar a través de las acciones específicas)
+      estados: ['Pendiente', 'Confirmado', 'Atendido'],
+      // Cambio: se agrega isLoading para controlar el estado de las acciones asíncronas y evitar múltiples clicks que puedan generar estados inconsistentes
+      isLoading: false
     }
   },
   async mounted() {
@@ -47,34 +50,51 @@ export default {
       const res = await turnosApi.getById(this.$route.params.id)
       this.turno = res.data
       this.nuevoEstado = this.turno.estado
-    } catch {
-      alert('Error al procesar la solicitud')
+    } catch (error) {
+      alert(error.response?.data?.mensaje || 'Error al obtener los detalles del turno')
     }
   },
   methods: {
     formatFecha(fecha) {
-      return new Date(fecha).toLocaleString('es-AR')
+      return new Date(fecha).toLocaleString('es-AR', { hour12: false })
     },
     async cambiarEstado() {
-      // Acá hay un error, si actualizamos el estado se pierden los datos de Paciente, DNI, Medico en el front (al recargar vuelven a aparecer)
-      // Otro error: si actualizamos el estado a Cancelado o NoShow, el backend no debería permitirlo porque hay endpoints específicos para esas acciones (cancelar y marcar ausencia)
-      // O en realidad, si el estado es Cancelado o NoShow, debe permitirse, pero validando al igual que en sus endpoints individuales
       try {
+        this.isLoading = true;
         const res = await turnosApi.actualizarEstado(this.turno.id, { estado: this.nuevoEstado })
-        this.turno = res.data
-      } catch {
-        alert('Error al procesar la solicitud')
+        // Cambio: como la API solo va a devolver el turno (sin Médico o Paciente incluido) lo único que me interesa actualizar es el estado
+        this.turno.estado = res.data.estado
+      } catch (error) {
+        alert(error.response?.data?.mensaje || 'Error al cambiar el estado del turno')
+      } finally {
+        this.isLoading = false;
       }
     },
     async cancelar() {
-      await turnosApi.cancelar(this.turno.id)
-      // Decidir si devolver data completa desde el back (paciente y medico) o actualizar el estado en el front sin necesidad de hacer otra consulta
-      this.turno.estado = 'Cancelado'
+      try {
+        this.isLoading = true;
+        await turnosApi.cancelar(this.turno.id)
+        // Cambio: como la API solo va a devolver el turno (sin Médico o Paciente incluido) lo único que me interesa actualizar es el estado
+        this.turno.estado = 'Cancelado'
+      } catch (error) {
+        console.log("Error completo:", error);
+    console.log("¿Tiene response?:", error.response);
+        alert(error.response?.data?.mensaje || 'Error al cancelar el turno')
+      } finally {
+        this.isLoading = false;
+      }
     },
     async marcarAusencia() {
-      await turnosApi.marcarAusencia(this.turno.id)
-      // Decidir si devolver data completa desde el back (paciente y medico) o actualizar el estado en el front sin necesidad de hacer otra consulta
-      this.turno.estado = 'NoShow'
+      try {
+        this.isLoading = true;
+        await turnosApi.marcarAusencia(this.turno.id)
+        // Cambio: como la API solo va a devolver el turno (sin Médico o Paciente incluido) lo único que me interesa actualizar es el estado
+        this.turno.estado = 'NoShow'
+      } catch (error) {
+        alert(error.response?.data?.mensaje || 'Error al marcar ausencia')
+      } finally {
+        this.isLoading = false;
+      }
     }
   }
 }
@@ -92,5 +112,13 @@ export default {
   font-weight: 600;
   color: #666;
   flex-shrink: 0;
+}
+
+button:disabled {
+  background-color: #e0e0e0;
+  color: #9e9e9e;
+  cursor: not-allowed;
+  opacity: 0.8;
+  border: 1px solid #cccccc;
 }
 </style>

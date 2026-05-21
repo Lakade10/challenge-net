@@ -34,6 +34,7 @@ public class PacientesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] Paciente paciente)
     {
+        // Añadir validación de paciente existente previa creación
         paciente.createdAt = DateTime.UtcNow;
         paciente.isActive = true;
         _context.Pacientes.Add(paciente);
@@ -56,6 +57,7 @@ public class PacientesController : ControllerBase
         return Ok(existing);
     }
 
+    // Modificar por baja lógica en Paciente.IsActive = false, o crear un endpoint similar para ello
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

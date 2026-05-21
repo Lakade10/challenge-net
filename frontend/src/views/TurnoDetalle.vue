@@ -56,6 +56,9 @@ export default {
       return new Date(fecha).toLocaleString('es-AR')
     },
     async cambiarEstado() {
+      // Acá hay un error, si actualizamos el estado se pierden los datos de Paciente, DNI, Medico en el front (al recargar vuelven a aparecer)
+      // Otro error: si actualizamos el estado a Cancelado o NoShow, el backend no debería permitirlo porque hay endpoints específicos para esas acciones (cancelar y marcar ausencia)
+      // O en realidad, si el estado es Cancelado o NoShow, debe permitirse, pero validando al igual que en sus endpoints individuales
       try {
         const res = await turnosApi.actualizarEstado(this.turno.id, { estado: this.nuevoEstado })
         this.turno = res.data
@@ -65,9 +68,13 @@ export default {
     },
     async cancelar() {
       await turnosApi.cancelar(this.turno.id)
+      // Decidir si devolver data completa desde el back (paciente y medico) o actualizar el estado en el front sin necesidad de hacer otra consulta
+      this.turno.estado = 'Cancelado'
     },
     async marcarAusencia() {
       await turnosApi.marcarAusencia(this.turno.id)
+      // Decidir si devolver data completa desde el back (paciente y medico) o actualizar el estado en el front sin necesidad de hacer otra consulta
+      this.turno.estado = 'NoShow'
     }
   }
 }

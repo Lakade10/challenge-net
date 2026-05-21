@@ -58,21 +58,29 @@ public class TurnosController : ControllerBase
             t.Estado != EstadoTurno.Cancelado);
         if (turnoConflicto)
             return BadRequest(new { mensaje = "El médico ya tiene un turno en ese horario." });
-
-        turno.FechaCreacion = DateTime.UtcNow;
+        // Cambio: validación de longitud de Motivo (podría ser un data anottation en el modelo de Turno)
+        if (turno.Motivo.Length > 100)
+            return BadRequest(new { mensaje = "El motivo no puede superar los 100 caracteres." });
+        // Cambio: validación de FechaHora posterior a la actual
+        if (turno.FechaHora <= DateTime.Now)
+            return BadRequest(new { mensaje = "El turno no puede ser creado para la fecha y hora anterior o igual a la actual." });
+        // Cambio: UtcNow por Now
+        turno.FechaCreacion = DateTime.Now;
         turno.Estado = EstadoTurno.Pendiente;
         _context.Turnos.Add(turno);
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetById), new { id = turno.Id }, turno);
     }
 
-    [HttpGet("cancelar/{id}")]
+    // Cambio: HttpGet a HttpPut y lo deje como "{id}/cancelar" para ordenar lógicamente las acciones
+    [HttpPut("{id}/cancelar")]
     public async Task<IActionResult> CancelarTurno(int id)
     {
         var turno = await _context.Turnos.FindAsync(id);
         if (turno == null) return NotFound();
 
-        if (turno.FechaHora - DateTime.Now < TimeSpan.FromHours(23))
+        // Cambio: uso IsWithinCancellationWindow
+        if (turno.FechaHora.IsWithinCancellationWindow())
             return BadRequest(new { mensaje = "No se puede cancelar con menos de 24 horas de anticipación." });
 
         turno.Estado = EstadoTurno.Cancelado;
@@ -80,7 +88,8 @@ public class TurnosController : ControllerBase
         return Ok(turno);
     }
 
-    [HttpPost("{id}/ausencia")]
+    // Cambio: HttpPost a HttpPut y lo deje como "{id}/ausentar" para ordenar lógicamente las acciones
+    [HttpPut("{id}/ausentar")]
     public async Task<IActionResult> MarcarAusencia(int id)
     {
         var turno = await _context.Turnos.FindAsync(id);

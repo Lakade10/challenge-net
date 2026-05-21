@@ -2,6 +2,7 @@ namespace TurnosMedicos.Models;
 
 public class Paciente
 {
+    // Añadir data anotations para validación y restricciones de la base de datos
     public int Id { get; set; }
     public string NombreCompleto { get; set; } = string.Empty;
     public string DNI { get; set; } = string.Empty;

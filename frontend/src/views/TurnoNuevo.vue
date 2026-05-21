@@ -4,7 +4,7 @@
     <form @submit.prevent="guardar">
       <div class="form-group">
         <label>Paciente</label>
-        <select v-model="form.pacienteId">
+        <select v-model="form.pacienteId" required>
           <option value="">Seleccioná un paciente</option>
           <option v-for="p in pacientes" :key="p.id" :value="p.id">
             {{ p.nombreCompleto }} — DNI {{ p.dni }}
@@ -13,7 +13,7 @@
       </div>
       <div class="form-group">
         <label>Médico</label>
-        <select v-model="form.medicoId">
+        <select v-model="form.medicoId" required>
           <option value="">Seleccioná un médico</option>
           <option v-for="m in medicos" :key="m.id" :value="m.id">
             {{ m.nombreCompleto }} — {{ m.especialidad }}
@@ -22,13 +22,13 @@
       </div>
       <div class="form-group">
         <label>Fecha y hora</label>
-        <input type="datetime-local" v-model="form.fechaHora" />
+        <input type="datetime-local" :min="fechaMinima" v-model="form.fechaHora" />
       </div>
       <div class="form-group">
         <label>Motivo</label>
-        <input type="text" v-model="form.motivo" placeholder="Motivo de la consulta" />
+        <input type="text" v-model="form.motivo" maxLength="100" placeholder="Motivo de la consulta" />
       </div>
-      <button type="submit">Confirmar turno</button>
+      <button type="submit" :disabled="isLoading">Confirmar turno</button>
     </form>
   </div>
 </template>
@@ -47,7 +47,8 @@ export default {
         motivo: ''
       },
       pacientes: [],
-      medicos: []
+      medicos: [],
+      isLoading: false
     }
   },
   async mounted() {
@@ -55,13 +56,22 @@ export default {
       const [pRes, mRes] = await Promise.all([pacientesApi.getAll(), medicosApi.getAll()])
       this.pacientes = pRes.data
       this.medicos = mRes.data
-    } catch {
-      alert('Error al procesar la solicitud')
+    } catch (error) {
+      alert(error.response?.data?.mensaje || 'Error al cargar los datos iniciales')
+    }
+  },
+  computed: {
+    fechaMinima() {
+      const hoy = new Date();
+      hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
+      console.log(hoy.toISOString().slice(0, 16))
+      return hoy.toISOString().slice(0, 16);
     }
   },
   methods: {
     async guardar() {
       try {
+        this.isLoading = true
         await turnosApi.create({
           pacienteId: Number(this.form.pacienteId),
           medicoId: Number(this.form.medicoId),
@@ -69,10 +79,21 @@ export default {
           motivo: this.form.motivo
         })
         this.$router.push('/turnos')
-      } catch {
-        alert('Error al procesar la solicitud')
+      } catch (error) {
+        alert(error.response?.data?.mensaje || 'Error al crear el turno')
+      } finally {
+        this.isLoading = false
       }
     }
   }
 }
 </script>
+<style scoped>
+  button:disabled {
+    background-color: #e0e0e0;
+    color: #9e9e9e;
+    cursor: not-allowed;
+    opacity: 0.8;
+    border: 1px solid #cccccc;
+  }
+</style>

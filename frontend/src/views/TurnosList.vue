@@ -26,6 +26,7 @@
           </td>
           <td>{{ turno.motivo }}</td>
           <td>
+            <!-- Aca hay que modificar el router-link para que se vea como un botón -->
             <router-link :to="`/turnos/${turno.id}`">Ver</router-link>
             <button class="btn-danger" style="margin-left: 8px" @click="cancelar(turno.id)">Cancelar</button>
           </td>

@@ -24,11 +24,13 @@
           <td>
             <span :class="['badge', `badge-${turno.estado?.toLowerCase()}`]">{{ turno.estado }}</span>
           </td>
-          <td>{{ turno.motivo }}</td>
+          <td>{{ truncarMotivo(turno.motivo) }}</td>
           <td>
             <!-- Aca hay que modificar el router-link para que se vea como un botón -->
-            <router-link :to="`/turnos/${turno.id}`">Ver</router-link>
-            <button class="btn-danger" style="margin-left: 8px" @click="cancelar(turno.id)">Cancelar</button>
+             <div style="display: flex">
+               <button @click="$router.push(`/turnos/${turno.id}`)">Ver</button>
+               <button class="btn-danger" style="margin-left: 8px" @click="cancelar(turno.id)" :disabled="loadingTurnoId === turno.id || turno.estado === 'Cancelado'">Cancelar</button>
+             </div>
           </td>
         </tr>
       </tbody>
@@ -44,7 +46,9 @@ export default {
   name: 'TurnosList',
   data() {
     return {
-      turnos: []
+      turnos: [],
+      // Cambio: se agrega loadingTurnoId para bloquear el botón de cancelar para el turno que se esté cancelando
+      loadingTurnoId: null
     }
   },
   async mounted() {
@@ -57,10 +61,28 @@ export default {
   },
   methods: {
     formatFecha(fecha) {
-      return new Date(fecha).toLocaleString('es-AR')
+      // Cambio: formato 24hs en las fechas
+      return new Date(fecha).toLocaleString('es-AR', { hour12: false })
     },
     async cancelar(id) {
-      await turnosApi.cancelar(id)
+      try {
+        this.loadingTurnoId = id;
+        await turnosApi.cancelar(id)
+        // Cambio: actualizamos el estado del turno cancelado
+        const turno = this.turnos.find(t => t.id === id);
+        if (turno) {
+          turno.estado = 'Cancelado';
+        }
+      } catch (error) {
+        alert(error.response?.data?.mensaje || 'Error al cancelar el turno')
+      } finally {
+        this.loadingTurnoId = null;
+      }
+    },
+    // Cambio: añadimos función para truncar a 50 caracteres el motivo y no romper el diseño de la tabla
+    truncarMotivo(motivo) {
+      if (!motivo) return '';
+      return motivo.length > 50 ? motivo.substring(0, 50) + '...' : motivo;
     }
   }
 }
@@ -78,4 +100,11 @@ export default {
 .badge-cancelado   { background: #f8d7da; color: #721c24; }
 .badge-atendido    { background: #d1ecf1; color: #0c5460; }
 .badge-noshow      { background: #e2e3e5; color: #383d41; }
+button:disabled {
+  background-color: #e0e0e0;
+  color: #9e9e9e;
+  cursor: not-allowed;
+  opacity: 0.8;
+  border: 1px solid #cccccc;
+}
 </style>

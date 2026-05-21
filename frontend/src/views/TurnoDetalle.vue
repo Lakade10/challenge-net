@@ -56,6 +56,7 @@ export default {
   },
   methods: {
     formatFecha(fecha) {
+      // Cambio: formato 24hs en las fechas
       return new Date(fecha).toLocaleString('es-AR', { hour12: false })
     },
     async cambiarEstado() {

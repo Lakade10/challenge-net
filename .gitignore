@@ -1,12 +1,15 @@
 # .NET
 backend/bin/
 backend/obj/
+backend/.vs/
+.vs/
 backend/*.db
 backend/*.db-shm
 backend/*.db-wal
 *.dtbcache.v2
 *.vs
-backend/*.vs
+*.suo
+*.vsidx
 
 # Node
 frontend/node_modules/

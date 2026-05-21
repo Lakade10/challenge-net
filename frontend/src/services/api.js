@@ -6,8 +6,8 @@ export const turnosApi = {
   getAll:           ()          => axios.get(`${BASE_URL}/turnos`),
   getById:          (id)        => axios.get(`${BASE_URL}/turnos/${id}`),
   create:           (data)      => axios.post(`${BASE_URL}/turnos`, data),
-  cancelar:         (id)        => axios.get(`${BASE_URL}/turnos/cancelar/${id}`),
-  marcarAusencia:   (id)        => axios.post(`${BASE_URL}/turnos/${id}/ausencia`),
+  cancelar:         (id)        => axios.put(`${BASE_URL}/turnos/${id}/cancelar`),
+  marcarAusencia:   (id)        => axios.put(`${BASE_URL}/turnos/${id}/ausentar`),
   actualizarEstado: (id, data)  => axios.put(`${BASE_URL}/turnos/${id}/estado`, data)
 }
 

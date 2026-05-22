@@ -18,12 +18,12 @@
             <option v-for="e in estados" :key="e" :value="e">{{ e }}</option>
           </select>
         </div>
-        <button @click="cambiarEstado" :disabled="isLoading || this.turno.estado === this.nuevoEstado" style="margin-bottom: 16px">Actualizar estado</button>
+        <button @click="cambiarEstado" :disabled="isLoading || this.turno.estado === this.nuevoEstado || this.turno.estado === 'Cancelado' || this.turno.estado === 'NoShow'" style="margin-bottom: 16px">Actualizar estado</button>
       </div>
 
       <div style="display: flex; gap: 10px">
-        <button :disabled="isLoading || this.turno.estado === 'Cancelado'" class="btn-danger" @click="cancelar">Cancelar turno</button>
-        <button :disabled="isLoading || this.turno.estado === 'NoShow'" @click="marcarAusencia">Marcar ausencia</button>
+        <button :disabled="isLoading || this.turno.estado === 'Cancelado' || this.turno.estado === 'NoShow'" class="btn-danger" @click="cancelar">Cancelar turno</button>
+        <button :disabled="isLoading || this.turno.estado === 'Cancelado' || this.turno.estado === 'NoShow'" @click="marcarAusencia">Marcar ausencia</button>
       </div>
     </div>
     <p v-else>Cargando...</p>

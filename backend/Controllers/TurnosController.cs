@@ -23,6 +23,7 @@ public class TurnosController : ControllerBase
         var turnos = await _context.Turnos
             .Include(t => t.Paciente)
             .Include(t => t.Medico)
+            .Where(t => t.Paciente != null && t.Paciente.isActive) // Cambio: devolvemos turnos de pacientes activos
             .ToListAsync();
         return Ok(turnos);
     }
@@ -45,8 +46,23 @@ public class TurnosController : ControllerBase
         if (paciente == null)
             return NotFound(new { mensaje = "Paciente no encontrado." });
 
+        // Cambio: chequeo si está bloqueado y si ya pasaron 30 días desde que se bloqueó al paciente para reiniciar su bloqueo. Sino, mostramos hasta cuando está bloqueado.
         if (paciente.Bloqueado)
-            return BadRequest(new { mensaje = "El paciente se encuentra bloqueado para agendar turnos online." });
+        {
+            if (paciente.FechaBloqueo.HasValue && DateTime.Now >= paciente.FechaBloqueo.Value.AddDays(30))
+            {
+                paciente.Bloqueado = false;
+                paciente.NoShowCount = 0;
+                paciente.FechaBloqueo = null;
+            }
+            else
+            {
+                var fechaDesbloqueo = paciente.FechaBloqueo.HasValue
+                    ? paciente.FechaBloqueo.Value.AddDays(30).ToString("dd/MM/yyyy")
+                    : "próximamente";
+                return BadRequest(new { mensaje = $"El paciente se encuentra bloqueado por ausencias hasta el {fechaDesbloqueo}." });
+            }
+        }
 
         var medicoExiste = await _context.Medicos.AnyAsync(m => m.Id == turno.MedicoId);
         if (!medicoExiste)
@@ -79,9 +95,19 @@ public class TurnosController : ControllerBase
         var turno = await _context.Turnos.FindAsync(id);
         if (turno == null) return NotFound();
 
-        // Cambio: uso IsWithinCancellationWindow
+        // Cambio: si el turno está cancelado o ausentado, evitamos otro cambio de estado para no sumar un NoShow
+        if (turno.Estado == EstadoTurno.Cancelado || turno.Estado == EstadoTurno.NoShow)
+            return BadRequest(new { mensaje = "El turno ya se encuentra cancelado o marcado como ausencia." });
+
+        // Cambio: uso IsWithinCancellationWindow y sumamos NoShowCount solo si se cancela dentro de las 24 horas del turno
         if (turno.FechaHora.IsWithinCancellationWindow())
-            return BadRequest(new { mensaje = "No se puede cancelar con menos de 24 horas de anticipación." });
+        {
+            var paciente = await _context.Pacientes.FindAsync(turno.PacienteId);
+            if (paciente != null)
+            {
+                ProcesarBloqueo(paciente);
+            }
+        }
 
         turno.Estado = EstadoTurno.Cancelado;
         await _context.SaveChangesAsync();
@@ -95,9 +121,19 @@ public class TurnosController : ControllerBase
         var turno = await _context.Turnos.FindAsync(id);
         if (turno == null) return NotFound();
 
+        // Cambio: si el turno está cancelado o ausentado, evitamos otro cambio de estado para no sumar un NoShow
+        if (turno.Estado == EstadoTurno.Cancelado || turno.Estado == EstadoTurno.NoShow)
+            return BadRequest(new { mensaje = "El turno ya se encuentra cancelado o marcado como ausencia." });
+
         if (!turno.FechaHora.IsWithinCancellationWindow())
             return BadRequest(new { mensaje = "La ausencia solo puede registrarse dentro de las 24 horas del turno." });
 
+        // Cambio: si ausentamos, sumamos NoShow
+        var paciente = await _context.Pacientes.FindAsync(turno.PacienteId);
+        if (paciente != null)
+        {
+            ProcesarBloqueo(paciente);
+        }
         turno.Estado = EstadoTurno.NoShow;
         await _context.SaveChangesAsync();
         return Ok(turno);
@@ -109,10 +145,27 @@ public class TurnosController : ControllerBase
         var turno = await _context.Turnos.FindAsync(id);
         if (turno == null) return NotFound();
 
+        // Cambio: si el turno está cancelado o ausentado, evitamos otro cambio de estado para no sumar un NoShow
+        if (turno.Estado == EstadoTurno.Cancelado || turno.Estado == EstadoTurno.NoShow)
+            return BadRequest(new { mensaje = "El turno ya se encuentra cancelado o marcado como ausencia." });
+
         turno.Estado = request.Estado;
         await _context.SaveChangesAsync();
         return Ok(turno);
     }
+
+    // Cambio: función para sumar NoShow (ausencia) al paciente y bloquearlo si llega a 3
+    private void ProcesarBloqueo(Paciente paciente)
+    {
+        paciente.NoShowCount++;
+
+        if (paciente.NoShowCount >= 3)
+        {
+            paciente.Bloqueado = true;
+            paciente.FechaBloqueo = DateTime.Now;
+        }
+    }
+
 }
 
 public class ActualizarEstadoRequest

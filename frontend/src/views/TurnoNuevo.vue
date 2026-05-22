@@ -22,7 +22,7 @@
       </div>
       <div class="form-group">
         <label>Fecha y hora</label>
-        <input type="datetime-local" :min="fechaMinima" v-model="form.fechaHora" />
+        <input type="datetime-local" :min="fechaMinima" required v-model="form.fechaHora" />
       </div>
       <div class="form-group">
         <label>Motivo</label>

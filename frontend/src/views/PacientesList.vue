@@ -27,7 +27,7 @@
             <span v-else style="color: #388e3c">No</span>
           </td>
           <td>
-            <button class="btn-danger" @click="eliminar(p.id)">Eliminar</button>
+            <button class="btn-danger" @click="eliminar(p.id)" :disabled="loadingPacienteId === p.id">Eliminar</button>
           </td>
         </tr>
       </tbody>
@@ -43,26 +43,39 @@ export default {
   name: 'PacientesList',
   data() {
     return {
-      pacientes: []
+      pacientes: [],
+      loadingPacienteId: null
     }
   },
   async mounted() {
     try {
       const res = await pacientesApi.getAll()
       this.pacientes = res.data
-    } catch {
-      alert('Error al procesar la solicitud')
+    } catch (error) {
+      alert(error.response?.data?.mensaje || 'Error al cargar los pacientes')
     }
   },
   methods: {
     async eliminar(id) {
       try {
+        this.loadingPacienteId = id;
         await pacientesApi.delete(id)
         this.pacientes = this.pacientes.filter(p => p.id !== id)
-      } catch {
-        alert('Error al procesar la solicitud')
+      } catch (error) {
+        alert(error.response?.data?.mensaje || 'Error al eliminar el paciente')
+      } finally {
+        this.loadingPacienteId = null;
       }
     }
   }
 }
 </script>
+<style scoped>
+button:disabled {
+  background-color: #e0e0e0;
+  color: #9e9e9e;
+  cursor: not-allowed;
+  opacity: 0.8;
+  border: 1px solid #cccccc;
+}
+</style>

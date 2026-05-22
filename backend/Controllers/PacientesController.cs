@@ -19,7 +19,8 @@ public class PacientesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var pacientes = await _context.Pacientes.ToListAsync();
+        // Cambio: filtramos para traer solo a los pacientes activos
+        var pacientes = await _context.Pacientes.Where(p => p.isActive).ToListAsync();
         return Ok(pacientes);
     }
 
@@ -34,8 +35,12 @@ public class PacientesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] Paciente paciente)
     {
-        // Añadir validación de paciente existente previa creación
-        paciente.createdAt = DateTime.UtcNow;
+        // Cambio: validamos si ya hay un paciente con el mismo DNI
+        var existeDni = await _context.Pacientes.AnyAsync(p => p.DNI == paciente.DNI);
+        if (existeDni)
+            return BadRequest(new { mensaje = "Ya existe un paciente registrado con ese DNI." });
+
+        paciente.createdAt = DateTime.Now;
         paciente.isActive = true;
         _context.Pacientes.Add(paciente);
         await _context.SaveChangesAsync();
@@ -57,14 +62,14 @@ public class PacientesController : ControllerBase
         return Ok(existing);
     }
 
-    // Modificar por baja lógica en Paciente.IsActive = false, o crear un endpoint similar para ello
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var paciente = await _context.Pacientes.FindAsync(id);
         if (paciente == null) return NotFound();
+        // Cambio: cambiamos a baja lógica para persistir la información del paciente en BD
+        paciente.isActive = false;
 
-        _context.Pacientes.Remove(paciente);
         await _context.SaveChangesAsync();
         return NoContent();
     }
